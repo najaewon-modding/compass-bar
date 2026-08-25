@@ -72,6 +72,13 @@ public final class CompassToggleHandler {
         }
 
         CompassState.toggle();
+
+        if (CompassState.isVisible()) {
+            PlayerColorManager.assignMissingColors(
+                    PlayerPositionCache.getPlayers(),
+                    minecraft.player.getUUID()
+            );
+        }
     }
 
     // ------------------------------------------------------------

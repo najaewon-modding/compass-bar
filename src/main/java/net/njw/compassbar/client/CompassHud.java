@@ -33,21 +33,54 @@ public final class CompassHud {
     private static final int LABEL_Y = 4;
     private static final int TICK_BOTTOM_Y = 23;
 
+    /*
+     * 작은 tick 하나 사이의 화면상 간격.
+     *
+     * 4 ticks = 45°
+     * N <-> NE = 40px
+     */
     private static final int TICK_SPACING = 10;
+
+    /*
+     * 중앙 기준 좌우 표시 tick 수.
+     *
+     * 전체 폭:
+     * 12 * 10 * 2 = 240px
+     */
     private static final int HALF_TICKS = 12;
 
+    /*
+     * 작은 tick 하나당 실제 각도.
+     */
     private static final float DEGREES_PER_TICK = 11.25F;
 
+    /*
+     * Direction label 표시 범위.
+     */
     private static final float LABEL_VISIBLE_ANGLE = 95.0F;
 
+    /*
+     * 화면 중앙 고정 indicator 높이.
+     */
     private static final int CENTER_TICK_HEIGHT = 8;
 
+    /*
+     * 모든 Player marker는 크기와 관계없이
+     * 아래쪽을 이 위치에 맞춘다.
+     */
     private static final int MARKER_BOTTOM_Y = 16;
 
     // ------------------------------------------------------------
     // Marker Distance
     // ------------------------------------------------------------
 
+    /*
+     * Horizontal distance 기준.
+     *
+     * <= 64 blocks   -> 5x5
+     * <= 256 blocks  -> 4x4
+     * > 256 blocks   -> 3x3
+     */
     private static final double NEAR_DISTANCE = 64.0;
     private static final double MEDIUM_DISTANCE = 256.0;
 
@@ -57,19 +90,25 @@ public final class CompassHud {
 
     private static final int WHITE_TEXT_COLOR = 0xFFFFFFFF;
 
+    // X Axis: E / W
     private static final int X_AXIS_TEXT_COLOR = 0xFFFFB8B8;
+
+    // Z Axis: N / S
     private static final int Z_AXIS_TEXT_COLOR = 0xFFD8B8FF;
 
     private static final int MAJOR_TICK_COLOR = 0xFFFFFFFF;
     private static final int MEDIUM_TICK_COLOR = 0xDDFFFFFF;
     private static final int MINOR_TICK_COLOR = 0xAAFFFFFF;
 
+    /*
+     * 화면 중앙 indicator.
+     *
+     * 약 80% opacity.
+     */
     private static final int CENTER_TICK_COLOR = 0xCCFFFFFF;
 
-    private static final int PLAYER_MARKER_COLOR = 0xFFFFD966;
-
     // ------------------------------------------------------------
-    // Marker Size
+    // Player Marker Size
     // ------------------------------------------------------------
 
     private enum PlayerMarkerSize {
@@ -134,6 +173,15 @@ public final class CompassHud {
                 minecraft.gameRenderer.getMainCamera();
 
         /*
+         * Minecraft yaw:
+         *
+         * South =   0°
+         * West  =  90°
+         * North = 180°
+         * East  = -90°
+         *
+         * Compass heading:
+         *
          * North =   0°
          * East  =  90°
          * South = 180°
@@ -144,7 +192,10 @@ public final class CompassHud {
                         camera.yRot() + 180.0F
                 );
 
+        // ------------------------------------------------------------
         // Compass
+        // ------------------------------------------------------------
+
         drawCompass(
                 graphics,
                 minecraft,
@@ -152,7 +203,10 @@ public final class CompassHud {
                 heading
         );
 
-        // Fixed center indicator
+        // ------------------------------------------------------------
+        // Fixed Center Indicator
+        // ------------------------------------------------------------
+
         drawTick(
                 graphics,
                 centerX,
@@ -162,7 +216,10 @@ public final class CompassHud {
                 CENTER_TICK_COLOR
         );
 
-        // Players
+        // ------------------------------------------------------------
+        // Player Markers
+        // ------------------------------------------------------------
+
         drawPlayerMarkers(
                 graphics,
                 minecraft,
@@ -189,6 +246,10 @@ public final class CompassHud {
         int halfWidth =
                 HALF_TICKS * TICK_SPACING;
 
+        /*
+         * 좌우 끝에서 빈 공간이 생기지 않도록
+         * 한 tick씩 추가로 계산한다.
+         */
         for (
                 int offset = -HALF_TICKS - 1;
                 offset <= HALF_TICKS + 1;
@@ -200,11 +261,20 @@ public final class CompassHud {
             float tickAngle =
                     tickIndex * DEGREES_PER_TICK;
 
+            /*
+             * 현재 Camera 기준 상대 각도.
+             *
+             * negative -> 화면 왼쪽
+             * positive -> 화면 오른쪽
+             */
             float relativeAngle =
                     Mth.wrapDegrees(
                             tickAngle - heading
                     );
 
+            /*
+             * Angle -> Screen pixel
+             */
             float screenOffset =
                     relativeAngle
                             / DEGREES_PER_TICK
@@ -224,12 +294,23 @@ public final class CompassHud {
                 continue;
             }
 
+            /*
+             * 360 / 11.25 = 32 ticks
+             */
             int normalizedTick =
                     Math.floorMod(
                             tickIndex,
                             32
                     );
 
+            // --------------------------------------------------------
+            // Edge Scale
+            // --------------------------------------------------------
+
+            /*
+             * center = 0.0
+             * edge   = 1.0
+             */
             float edgeRatio =
                     Math.min(
                             1.0F,
@@ -237,12 +318,22 @@ public final class CompassHud {
                                     / (float) halfWidth
                     );
 
+            // --------------------------------------------------------
+            // Tick Style
+            // --------------------------------------------------------
+
             int tickHeight;
             int tickWidth;
             int tickColor;
 
             if (normalizedTick % 4 == 0) {
 
+                /*
+                 * Major tick
+                 *
+                 * center -> 6px
+                 * edge   -> 4px
+                 */
                 tickHeight =
                         Math.max(
                                 4,
@@ -258,6 +349,12 @@ public final class CompassHud {
 
             } else if (normalizedTick % 2 == 0) {
 
+                /*
+                 * Medium tick
+                 *
+                 * center -> 4px
+                 * edge   -> 3px
+                 */
                 tickHeight =
                         Math.max(
                                 3,
@@ -272,6 +369,9 @@ public final class CompassHud {
 
             } else {
 
+                /*
+                 * Minor tick은 항상 3px.
+                 */
                 tickHeight = 3;
                 tickWidth = 1;
                 tickColor = MINOR_TICK_COLOR;
@@ -285,6 +385,10 @@ public final class CompassHud {
                     tickHeight,
                     tickColor
             );
+
+            // --------------------------------------------------------
+            // Direction Label
+            // --------------------------------------------------------
 
             if (
                     normalizedTick % 4 == 0
@@ -335,7 +439,7 @@ public final class CompassHud {
                 PlayerPositionCache.getPlayers()
         ) {
             /*
-             * 자기 자신 제외.
+             * 자기 자신은 표시하지 않는다.
              */
             if (
                     target.uuid().equals(
@@ -346,7 +450,7 @@ public final class CompassHud {
             }
 
             /*
-             * 같은 dimension만 표시.
+             * 같은 dimension의 플레이어만 표시한다.
              */
             if (
                     !target.dimension().equals(
@@ -367,13 +471,21 @@ public final class CompassHud {
             double distanceSquared =
                     dx * dx + dz * dz;
 
+            /*
+             * 거의 같은 위치인 경우 방향 계산을 생략한다.
+             */
             if (distanceSquared < 0.0001) {
                 continue;
             }
 
             /*
+             * Minecraft world coordinate:
+             *
              * North = -Z
              * East  = +X
+             *
+             * atan2(dx, -dz)를 사용하면
+             * Compass heading convention과 일치한다.
              */
             float playerHeading =
                     normalizeDegrees(
@@ -390,12 +502,24 @@ public final class CompassHud {
                             distanceSquared
                     );
 
+            /*
+             * UUID별 Player color.
+             *
+             * 이미 지정된 UUID라면 기존 색을 사용하고,
+             * 처음 보는 UUID라면 새로운 색을 지정한다.
+             */
+            int markerColor =
+                    PlayerColorManager.getOrAssignColor(
+                            target.uuid()
+                    );
+
             drawPlayerMarker(
                     graphics,
                     centerX,
                     cameraHeading,
                     playerHeading,
-                    markerSize
+                    markerSize,
+                    markerColor
             );
         }
     }
@@ -409,7 +533,8 @@ public final class CompassHud {
             int centerX,
             float cameraHeading,
             float playerHeading,
-            PlayerMarkerSize markerSize
+            PlayerMarkerSize markerSize,
+            int markerColor
     ) {
         float relativeAngle =
                 Mth.wrapDegrees(
@@ -421,6 +546,10 @@ public final class CompassHud {
                 HALF_TICKS
                         * DEGREES_PER_TICK;
 
+        /*
+         * 현재 Compass Bar 범위 밖이면
+         * marker를 표시하지 않는다.
+         */
         if (
                 Math.abs(relativeAngle)
                         > maxVisibleAngle
@@ -428,6 +557,9 @@ public final class CompassHud {
             return;
         }
 
+        /*
+         * Angle -> Screen pixel
+         */
         float screenOffset =
                 relativeAngle
                         / DEGREES_PER_TICK
@@ -442,7 +574,8 @@ public final class CompassHud {
                 graphics,
                 x,
                 MARKER_BOTTOM_Y,
-                markerSize.size()
+                markerSize.size(),
+                markerColor
         );
     }
 
@@ -455,14 +588,16 @@ public final class CompassHud {
     ) {
         if (
                 distanceSquared
-                        <= NEAR_DISTANCE * NEAR_DISTANCE
+                        <= NEAR_DISTANCE
+                        * NEAR_DISTANCE
         ) {
             return PlayerMarkerSize.NEAR;
         }
 
         if (
                 distanceSquared
-                        <= MEDIUM_DISTANCE * MEDIUM_DISTANCE
+                        <= MEDIUM_DISTANCE
+                        * MEDIUM_DISTANCE
         ) {
             return PlayerMarkerSize.MEDIUM;
         }
@@ -474,11 +609,40 @@ public final class CompassHud {
     // Diamond Marker
     // ------------------------------------------------------------
 
+    /*
+     * 3 x 3
+     *
+     *  █
+     * ███
+     *  █
+     *
+     *
+     * 4 x 4
+     *
+     *  ██
+     * ████
+     * ████
+     *  ██
+     *
+     *
+     * 5 x 5
+     *
+     *   █
+     *  ███
+     * █████
+     *  ███
+     *   █
+     *
+     *
+     * 모든 marker는 MARKER_BOTTOM_Y를 기준으로
+     * 하단 정렬한다.
+     */
     private static void drawDiamondMarker(
             GuiGraphicsExtractor graphics,
             int centerX,
             int bottomY,
-            int size
+            int size,
+            int color
     ) {
         int topY =
                 bottomY - size + 1;
@@ -492,6 +656,12 @@ public final class CompassHud {
 
             if (size % 2 == 1) {
 
+                /*
+                 * Odd
+                 *
+                 * 3 -> 1, 3, 1
+                 * 5 -> 1, 3, 5, 3, 1
+                 */
                 int centerRow =
                         size / 2;
 
@@ -504,6 +674,11 @@ public final class CompassHud {
 
             } else {
 
+                /*
+                 * Even
+                 *
+                 * 4 -> 2, 4, 4, 2
+                 */
                 int distanceFromEdge =
                         Math.min(
                                 row,
@@ -529,7 +704,7 @@ public final class CompassHud {
                     y,
                     left + rowWidth,
                     y + 1,
-                    PLAYER_MARKER_COLOR
+                    color
             );
         }
     }
@@ -561,19 +736,23 @@ public final class CompassHud {
             String label
     ) {
         return switch (label) {
+
+            // X Axis
             case "E", "W" ->
                     X_AXIS_TEXT_COLOR;
 
+            // Z Axis
             case "N", "S" ->
                     Z_AXIS_TEXT_COLOR;
 
+            // Diagonal
             default ->
                     WHITE_TEXT_COLOR;
         };
     }
 
     // ------------------------------------------------------------
-    // Drawing
+    // Drawing Helpers
     // ------------------------------------------------------------
 
     private static void drawTick(
