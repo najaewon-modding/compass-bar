@@ -42,18 +42,12 @@ public final class CompassHud {
 
     private static final int CENTER_TICK_HEIGHT = 8;
 
-    /*
-     * Player marker는 모두 이 위치에 하단 정렬.
-     */
     private static final int MARKER_BOTTOM_Y = 16;
 
     // ------------------------------------------------------------
     // Marker Distance
     // ------------------------------------------------------------
 
-    /*
-     * Horizontal distance 기준.
-     */
     private static final double NEAR_DISTANCE = 64.0;
     private static final double MEDIUM_DISTANCE = 256.0;
 
@@ -70,15 +64,8 @@ public final class CompassHud {
     private static final int MEDIUM_TICK_COLOR = 0xDDFFFFFF;
     private static final int MINOR_TICK_COLOR = 0xAAFFFFFF;
 
-    /*
-     * 중앙 고정 indicator:
-     * 약 80% opacity.
-     */
     private static final int CENTER_TICK_COLOR = 0xCCFFFFFF;
 
-    /*
-     * Player marker.
-     */
     private static final int PLAYER_MARKER_COLOR = 0xFFFFD966;
 
     // ------------------------------------------------------------
@@ -133,6 +120,13 @@ public final class CompassHud {
             return;
         }
 
+        /*
+         * Compass가 OFF라면 아무것도 그리지 않는다.
+         */
+        if (!CompassState.isVisible()) {
+            return;
+        }
+
         int centerX =
                 graphics.guiWidth() / 2;
 
@@ -140,8 +134,6 @@ public final class CompassHud {
                 minecraft.gameRenderer.getMainCamera();
 
         /*
-         * Compass heading:
-         *
          * North =   0°
          * East  =  90°
          * South = 180°
@@ -170,7 +162,7 @@ public final class CompassHud {
                 CENTER_TICK_COLOR
         );
 
-        // Actual players
+        // Players
         drawPlayerMarkers(
                 graphics,
                 minecraft,
@@ -322,7 +314,7 @@ public final class CompassHud {
     }
 
     // ------------------------------------------------------------
-    // Actual Player Markers
+    // Player Markers
     // ------------------------------------------------------------
 
     private static void drawPlayerMarkers(
@@ -343,7 +335,7 @@ public final class CompassHud {
                 PlayerPositionCache.getPlayers()
         ) {
             /*
-             * 자기 자신은 표시하지 않는다.
+             * 자기 자신 제외.
              */
             if (
                     target.uuid().equals(
@@ -354,7 +346,7 @@ public final class CompassHud {
             }
 
             /*
-             * 같은 dimension의 플레이어만 표시한다.
+             * 같은 dimension만 표시.
              */
             if (
                     !target.dimension().equals(
@@ -375,22 +367,13 @@ public final class CompassHud {
             double distanceSquared =
                     dx * dx + dz * dz;
 
-            /*
-             * 거의 같은 위치인 경우 방향 계산 생략.
-             */
             if (distanceSquared < 0.0001) {
                 continue;
             }
 
             /*
-             * Minecraft world coordinate:
-             *
              * North = -Z
              * East  = +X
-             *
-             * atan2(dx, -dz)를 사용하면
-             * 우리가 사용하는 Compass heading과
-             * 정확히 같은 convention이 된다.
              */
             float playerHeading =
                     normalizeDegrees(
@@ -438,10 +421,6 @@ public final class CompassHud {
                 HALF_TICKS
                         * DEGREES_PER_TICK;
 
-        /*
-         * 현재 Compass Bar 범위 밖이면
-         * marker를 표시하지 않는다.
-         */
         if (
                 Math.abs(relativeAngle)
                         > maxVisibleAngle
@@ -468,7 +447,7 @@ public final class CompassHud {
     }
 
     // ------------------------------------------------------------
-    // Marker Distance -> Size
+    // Distance -> Marker Size
     // ------------------------------------------------------------
 
     private static PlayerMarkerSize getPlayerMarkerSize(
@@ -492,7 +471,7 @@ public final class CompassHud {
     }
 
     // ------------------------------------------------------------
-    // Diamond
+    // Diamond Marker
     // ------------------------------------------------------------
 
     private static void drawDiamondMarker(

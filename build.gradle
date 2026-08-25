@@ -61,6 +61,13 @@ neoForge {
             programArguments.addAll("--username", "Dev2")
         }
 
+        client3 {
+            client()
+
+            gameDirectory = project.file("run/client3")
+            programArguments.addAll("--username", "Dev3")
+        }
+
         server {
             server()
             programArgument '--nogui'
