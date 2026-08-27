@@ -1,8 +1,8 @@
 package net.njw.compassbar.client;
 
-import net.njw.compassbar.CompassBar;
-
 import net.minecraft.client.Minecraft;
+import net.njw.compassbar.CompassBar;
+import net.njw.compassbar.network.CompassSubscriptionPayload;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -10,103 +10,52 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
-@EventBusSubscriber(
-        modid = CompassBar.MODID,
-        value = Dist.CLIENT
-)
+@EventBusSubscriber(modid = CompassBar.MODID, value = Dist.CLIENT)
 public final class CompassToggleHandler {
-
     private static boolean tabWasDown = false;
 
-    private CompassToggleHandler() {
-    }
-
-    // ------------------------------------------------------------
-    // Tab Toggle
-    // ------------------------------------------------------------
+    private CompassToggleHandler() {}
 
     @SubscribeEvent
-    public static void onClientTick(
-            ClientTickEvent.Post event
-    ) {
-        Minecraft minecraft =
-                Minecraft.getInstance();
-
-        boolean tabIsDown =
-                minecraft.options
-                        .keyPlayerList
-                        .isDown();
-
-        /*
-         * false -> true가 되는 순간만 press로 취급한다.
-         *
-         * 따라서 Tab을 길게 누르고 있어도
-         * 한 번만 toggle된다.
-         */
-        boolean tabPressed =
-                tabIsDown && !tabWasDown;
-
-        /*
-         * 반드시 매 tick 갱신한다.
-         */
+    public static void onClientTick(ClientTickEvent.Post event) {
+        Minecraft minecraft = Minecraft.getInstance();
+        boolean tabIsDown = minecraft.options.keyPlayerList.isDown();
+        boolean tabPressed = tabIsDown && !tabWasDown;
         tabWasDown = tabIsDown;
 
-        if (!tabPressed) {
-            return;
-        }
-
-        /*
-         * 월드 안에서만 동작.
-         */
-        if (minecraft.player == null) {
-            return;
-        }
-
-        /*
-         * Inventory, Chat 등의 Screen이 열려 있을 때는
-         * Tab toggle을 처리하지 않는다.
-         */
-        if (minecraft.screen != null) {
-            return;
-        }
+        if (!tabPressed || minecraft.player == null || minecraft.screen != null) return;
 
         CompassState.toggle();
+        boolean visible = CompassState.isVisible();
+        sendSubscriptionState(minecraft, visible);
 
-        if (CompassState.isVisible()) {
+        if (visible) {
             PlayerColorManager.assignMissingColors(
                     PlayerPositionCache.getPlayers(),
                     minecraft.player.getUUID()
             );
+        } else {
+            PlayerPositionCache.clear();
         }
     }
 
-    // ------------------------------------------------------------
-    // Hide Vanilla Tab List
-    // ------------------------------------------------------------
-
-    @SubscribeEvent
-    public static void onRenderGuiLayer(
-            RenderGuiLayerEvent.Pre event
-    ) {
-        if (
-                event.getName().equals(
-                        VanillaGuiLayers.TAB_LIST
-                )
-        ) {
-            event.setCanceled(true);
-        }
+    private static void sendSubscriptionState(Minecraft minecraft, boolean active) {
+        var connection = minecraft.getConnection();
+        if (connection == null || !connection.hasChannel(CompassSubscriptionPayload.TYPE)) return;
+        ClientPacketDistributor.sendToServer(new CompassSubscriptionPayload(active));
     }
 
-    // ------------------------------------------------------------
-    // Reset
-    // ------------------------------------------------------------
+    @SubscribeEvent
+    public static void onRenderGuiLayer(RenderGuiLayerEvent.Pre event) {
+        if (event.getName().equals(VanillaGuiLayers.TAB_LIST)) event.setCanceled(true);
+    }
 
     @SubscribeEvent
-    public static void onLogout(
-            ClientPlayerNetworkEvent.LoggingOut event
-    ) {
+    public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         CompassState.hide();
+        PlayerPositionCache.clear();
         tabWasDown = false;
     }
 }

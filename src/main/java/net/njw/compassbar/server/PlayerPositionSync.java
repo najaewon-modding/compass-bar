@@ -1,88 +1,107 @@
 package net.njw.compassbar.server;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.njw.compassbar.CompassBar;
+import net.njw.compassbar.network.CompassSubscriptionPayload;
 import net.njw.compassbar.network.PlayerPositionData;
 import net.njw.compassbar.network.PlayerPositionsPayload;
-
-import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.List;
-
-@EventBusSubscriber(
-        modid = CompassBar.MODID
-)
+@EventBusSubscriber(modid = CompassBar.MODID)
 public final class PlayerPositionSync {
-
-    /*
-     * Minecraft = 20 ticks / second
-     *
-     * 2 ticks마다 전송:
-     * 10 updates / second
-     */
-    private static final int SYNC_INTERVAL_TICKS = 2;
-
+    private static final int SYNC_INTERVAL_TICKS = 1;
+    private static final Set<UUID> ACTIVE_PLAYERS = new HashSet<>();
     private static int tickCounter = 0;
 
-    private PlayerPositionSync() {
+    private PlayerPositionSync() {}
+
+    public static void setCompassActive(ServerPlayer player, boolean active) {
+        UUID uuid = player.getUUID();
+
+        if (active) {
+            ACTIVE_PLAYERS.add(uuid);
+            sendCurrentPositions(player);
+        } else {
+            ACTIVE_PLAYERS.remove(uuid);
+        }
     }
 
     @SubscribeEvent
-    public static void onServerTick(
-            ServerTickEvent.Post event
-    ) {
+    public static void onServerTick(ServerTickEvent.Post event) {
         tickCounter++;
+        if (tickCounter < SYNC_INTERVAL_TICKS) return;
+        tickCounter = 0;
 
-        if (tickCounter < SYNC_INTERVAL_TICKS) {
+        List<ServerPlayer> players = event.getServer().getPlayerList().getPlayers();
+
+        if (players.isEmpty()) {
+            ACTIVE_PLAYERS.clear();
             return;
         }
 
-        tickCounter = 0;
+        Set<UUID> onlinePlayerIds =
+                players.stream().map(ServerPlayer::getUUID).collect(Collectors.toSet());
+        ACTIVE_PLAYERS.retainAll(onlinePlayerIds);
 
-        List<ServerPlayer> players =
-                event.getServer()
-                        .getPlayerList()
-                        .getPlayers();
+        List<ServerPlayer> recipients =
+                players.stream().filter(PlayerPositionSync::shouldReceivePositions).toList();
+        if (recipients.isEmpty()) return;
 
-        /*
-         * 현재 접속 중인 모든 플레이어의
-         * 위치 snapshot을 한 번 생성한다.
-         */
-        List<PlayerPositionData> positions =
-                players.stream()
-                        .map(player ->
-                                new PlayerPositionData(
-                                        player.getUUID(),
-                                        player.level().dimension(),
-                                        player.getX(),
-                                        player.getZ()
-                                )
-                        )
-                        .toList();
+        Map<ResourceKey<Level>, List<PlayerPositionData>> positionsByDimension = players.stream()
+                .collect(Collectors.groupingBy(
+                        player -> player.level().dimension(),
+                        Collectors.mapping(PlayerPositionSync::createPositionData, Collectors.toList())
+                ));
 
-        PlayerPositionsPayload payload =
-                new PlayerPositionsPayload(positions);
+        Map<ResourceKey<Level>, PlayerPositionsPayload> payloadsByDimension = new HashMap<>();
 
-        /*
-         * 이 payload를 지원하는 client에게만 보낸다.
-         *
-         * 모드가 없는 client에는 전송하지 않는다.
-         */
-        for (ServerPlayer recipient : players) {
-
-            if (!recipient.connection.hasChannel(
-                    PlayerPositionsPayload.TYPE
-            )) {
-                continue;
-            }
-
-            PacketDistributor.sendToPlayer(
-                    recipient,
-                    payload
+        for (ServerPlayer recipient : recipients) {
+            ResourceKey<Level> dimension = recipient.level().dimension();
+            PlayerPositionsPayload payload = payloadsByDimension.computeIfAbsent(
+                    dimension,
+                    key -> new PlayerPositionsPayload(positionsByDimension.getOrDefault(key, List.of()))
             );
+            PacketDistributor.sendToPlayer(recipient, payload);
         }
+    }
+
+    private static boolean shouldReceivePositions(ServerPlayer player) {
+        if (!player.connection.hasChannel(PlayerPositionsPayload.TYPE)) return false;
+        if (!player.connection.hasChannel(CompassSubscriptionPayload.TYPE)) return true;
+        return ACTIVE_PLAYERS.contains(player.getUUID());
+    }
+
+    private static void sendCurrentPositions(ServerPlayer recipient) {
+        if (!recipient.connection.hasChannel(PlayerPositionsPayload.TYPE)) return;
+
+        ResourceKey<Level> dimension = recipient.level().dimension();
+        List<PlayerPositionData> positions = recipient.level().getServer().getPlayerList().getPlayers().stream()
+                .filter(player -> player.level().dimension().equals(dimension))
+                .map(PlayerPositionSync::createPositionData)
+                .toList();
+
+        PacketDistributor.sendToPlayer(recipient, new PlayerPositionsPayload(positions));
+    }
+
+    private static PlayerPositionData createPositionData(ServerPlayer player) {
+        return new PlayerPositionData(
+                player.getUUID(),
+                player.level().dimension(),
+                player.getX(),
+                player.getZ()
+        );
     }
 }
