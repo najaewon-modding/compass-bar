@@ -1,8 +1,8 @@
 package net.njw.compassbar.client;
 
 import net.njw.compassbar.CompassBar;
+import net.njw.compassbar.network.PlayerColorsPayload;
 import net.njw.compassbar.network.PlayerPositionsPayload;
-
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -15,28 +15,28 @@ import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlers
 )
 public final class ClientNetworkHandler {
 
-    private ClientNetworkHandler() {
-    }
+    private ClientNetworkHandler() {}
 
     @SubscribeEvent
-    public static void registerPayloadHandlers(
-            RegisterClientPayloadHandlersEvent event
-    ) {
+    public static void registerPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
         event.register(
                 PlayerPositionsPayload.TYPE,
-                (payload, context) ->
-                        context.enqueueWork(
-                                () -> PlayerPositionCache.update(
-                                        payload.players()
-                                )
-                        )
+                (payload, context) -> context.enqueueWork(
+                        () -> PlayerPositionCache.update(payload.players())
+                )
+        );
+
+        event.register(
+                PlayerColorsPayload.TYPE,
+                (payload, context) -> context.enqueueWork(
+                        () -> PlayerColorManager.update(payload.colors())
+                )
         );
     }
 
     @SubscribeEvent
-    public static void onLogout(
-            ClientPlayerNetworkEvent.LoggingOut event
-    ) {
+    public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         PlayerPositionCache.clear();
+        PlayerColorManager.clear();
     }
 }

@@ -7,12 +7,13 @@ Minecraft의 기본 Player List를 방향 기반 Compass HUD로 대체하는 Neo
 ## 주요 기능
 
 - 화면 상단에 Compass Bar 표시
+- 게임 접속 시 Compass HUD 기본 ON
 - 카메라 방향에 따라 Compass가 실시간으로 이동
 - Player List 키를 눌러 Compass HUD ON/OFF
 - 접속 중인 다른 플레이어의 방향을 Compass 위에 표시
 - 플레이어와의 거리에 따라 marker 크기 변경
-- 플레이어마다 서로 다른 marker 색상 사용
-- 같은 게임 세션에서는 동일한 플레이어의 색상 유지
+- 서버에서 플레이어마다 중복되지 않는 marker 색상 배정
+- 같은 월드에서는 재접속 및 서버 재시작 후에도 동일한 플레이어 색상 유지
 - 화면 오른쪽 중앙에 현재 플레이어와 marker 색상 표시
 - Player Locator Bar 대신 Experience Bar를 항상 표시
 - Vanilla Player List 대신 Compass HUD 사용
@@ -29,9 +30,9 @@ Marker 크기는 플레이어와의 거리에 따라 달라집니다.
 | 64 ~ 256 blocks | 4 × 4 |
 | 256 blocks 초과 | 3 × 3 |
 
-각 플레이어에게는 고유한 색상이 임시로 배정됩니다.
+플레이어 색상은 Server가 UUID를 기준으로 한 번 배정하고 월드 SavedData에 저장합니다.
 
-색상은 게임을 종료할 때까지 UUID를 기준으로 유지되며, 게임을 다시 실행하면 새롭게 배정됩니다.
+새로운 플레이어에게는 HUD에서 너무 어둡거나 옅게 보이는 색을 제외한 후보 중 기존에 저장된 색들과 시각적으로 최대한 구분되는 색을 배정합니다. 동일한 RGB 색상은 다시 사용하지 않습니다.
 
 현재는 같은 dimension에 있는 플레이어만 Compass Bar에 표시됩니다.
 
@@ -43,7 +44,9 @@ Marker 크기는 플레이어와의 거리에 따라 달라집니다.
 
 `Tab`
 
-한 번 누르면 Compass HUD가 켜지고, 다시 누르면 꺼집니다.
+게임에 접속하면 Compass HUD가 기본적으로 켜져 있습니다.
+
+한 번 누르면 Compass HUD가 꺼지고, 다시 누르면 켜집니다.
 
 Minecraft Controls에서 Player List 키를 변경하면 Compass Bar도 변경된 키를 그대로 사용합니다.
 
@@ -51,14 +54,14 @@ Minecraft Controls에서 Player List 키를 변경하면 Compass Bar도 변경�
 
 Compass Bar는 Server와 Client 양쪽에서 사용할 수 있도록 만들어져 있습니다.
 
-Server는 플레이어 위치 정보를 지원되는 Client에 전달하고, Client는 해당 정보를 이용해 Compass HUD를 렌더링합니다.
+Server는 플레이어 위치와 영구 marker 색상 정보를 지원되는 Client에 전달하고, Client는 해당 정보를 이용해 Compass HUD를 렌더링합니다.
 
 | Server | Client | 동작 |
 | --- | --- | --- |
 | Compass Bar 설치 | Compass Bar 설치 | 모든 기능 사용 |
 | Compass Bar 설치 | 모드 없음 | Vanilla 상태로 정상 접속 |
 
-Client에 모드가 설치되어 있지 않은 경우 Server는 Compass Bar 전용 player position packet을 보내지 않습니다.
+Client에 모드가 설치되어 있지 않은 경우 Server는 Compass Bar 전용 packet을 보내지 않습니다.
 
 따라서 Server에 Compass Bar가 설치되어 있어도 Vanilla Client는 별도의 Client 모드 설치 없이 접속할 수 있으며, 기존 Minecraft UI가 그대로 유지됩니다.
 

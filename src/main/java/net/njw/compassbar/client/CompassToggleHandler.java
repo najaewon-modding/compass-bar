@@ -31,14 +31,7 @@ public final class CompassToggleHandler {
         boolean visible = CompassState.isVisible();
         sendSubscriptionState(minecraft, visible);
 
-        if (visible) {
-            PlayerColorManager.assignMissingColors(
-                    PlayerPositionCache.getPlayers(),
-                    minecraft.player.getUUID()
-            );
-        } else {
-            PlayerPositionCache.clear();
-        }
+        if (!visible) PlayerPositionCache.clear();
     }
 
     private static void sendSubscriptionState(Minecraft minecraft, boolean active) {
