@@ -53,6 +53,12 @@ public final class CompassToggleHandler {
     }
 
     @SubscribeEvent
+    public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+        CompassState.show();
+        sendSubscriptionState(Minecraft.getInstance(), true);
+    }
+
+    @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         CompassState.hide();
         PlayerPositionCache.clear();
