@@ -21,13 +21,15 @@ public final class PlayerColorSavedData extends SavedData {
     private static final int RGB_MASK = 0x00FFFFFF;
     private static final int RGB_SPACE_SIZE = 1 << 24;
     private static final int CANDIDATE_COUNT = 768;
-    private static final double MIN_HSL_SATURATION = 0.68;
-    private static final double MAX_HSL_SATURATION = 0.96;
-    private static final double MIN_HSL_LIGHTNESS = 0.52;
-    private static final double MAX_HSL_LIGHTNESS = 0.70;
-    private static final double MIN_OKLAB_LIGHTNESS = 0.62;
-    private static final double MAX_OKLAB_LIGHTNESS = 0.84;
-    private static final double MIN_OKLAB_CHROMA = 0.10;
+    private static final double MIN_HSL_SATURATION = 0.20;
+    private static final double MAX_HSL_SATURATION = 1.00;
+    private static final double MIN_HSL_LIGHTNESS = 0.28;
+    private static final double MAX_HSL_LIGHTNESS = 0.78;
+    private static final double MIN_OKLAB_LIGHTNESS = 0.42;
+    private static final double MAX_OKLAB_LIGHTNESS = 0.88;
+    private static final double MIN_OKLAB_CHROMA = 0.035;
+    private static final double PALE_OKLAB_LIGHTNESS = 0.80;
+    private static final double PALE_MIN_OKLAB_CHROMA = 0.070;
 
     private static final Codec<Map<String, Integer>> COLOR_MAP_CODEC =
             Codec.unboundedMap(Codec.STRING, Codec.INT);
@@ -153,9 +155,10 @@ public final class PlayerColorSavedData extends SavedData {
     private static boolean isVisible(int rgb) {
         OklabColor lab = toOklab(rgb);
         double chroma = Math.hypot(lab.a(), lab.b());
-        return lab.l() >= MIN_OKLAB_LIGHTNESS
-                && lab.l() <= MAX_OKLAB_LIGHTNESS
-                && chroma >= MIN_OKLAB_CHROMA;
+
+        if (lab.l() < MIN_OKLAB_LIGHTNESS || lab.l() > MAX_OKLAB_LIGHTNESS) return false;
+        if (chroma < MIN_OKLAB_CHROMA) return false;
+        return lab.l() <= PALE_OKLAB_LIGHTNESS || chroma >= PALE_MIN_OKLAB_CHROMA;
     }
 
     private static int hslToRgb(double hue, double saturation, double lightness) {
