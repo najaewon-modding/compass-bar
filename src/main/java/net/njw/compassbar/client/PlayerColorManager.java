@@ -50,7 +50,7 @@ public final class PlayerColorManager {
 
             PLAYER_COLORS.computeIfAbsent(
                     player.uuid(),
-                    uuid -> createRandomColor()
+                    uuid -> createColor()
             );
         }
     }
@@ -62,16 +62,18 @@ public final class PlayerColorManager {
     public static int getOrAssignColor(UUID uuid) {
         return PLAYER_COLORS.computeIfAbsent(
                 uuid,
-                ignored -> createRandomColor()
+                ignored -> createColor()
         );
     }
 
-    private static int createRandomColor() {
-        int index =
-                ThreadLocalRandom.current().nextInt(
-                        COLOR_PALETTE.length
-                );
+    private static int createColor() {
+        int startIndex = ThreadLocalRandom.current().nextInt(COLOR_PALETTE.length);
 
-        return COLOR_PALETTE[index];
+        for (int offset = 0; offset < COLOR_PALETTE.length; offset++) {
+            int color = COLOR_PALETTE[(startIndex + offset) % COLOR_PALETTE.length];
+            if (!PLAYER_COLORS.containsValue(color)) return color;
+        }
+
+        return COLOR_PALETTE[startIndex];
     }
 }

@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber(modid = CompassBar.MODID)
 public final class PlayerPositionSync {
-    private static final int SYNC_INTERVAL_TICKS = 1;
+    private static final int SYNC_INTERVAL_TICKS = 2;
     private static final Set<UUID> ACTIVE_PLAYERS = new HashSet<>();
     private static int tickCounter = 0;
 
