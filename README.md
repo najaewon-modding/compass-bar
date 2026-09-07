@@ -87,3 +87,7 @@ Client에 모드를 설치하지 않아도 Compass Bar가 설치된 Server에 �
 - NeoForge 26.1.2.97
 - Java 25
 - Gradle
+
+## License
+
+MIT
